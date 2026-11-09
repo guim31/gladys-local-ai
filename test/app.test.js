@@ -293,8 +293,21 @@ test('a failing chat model with a working router: one trigger, the status stays 
   );
   assert.equal(gladys.fake.sceneEvents[0].data.kind, 'memory');
   // The periodic check reads the models fine but must not say "connected".
+  // A reconnection to Gladys keeps the failure: no second trigger.
+  await gladys.disconnect();
+  await gladys.connect();
+  await app.whenReady();
+  assert.equal(gladys.fake.connectionStatus.connected, false);
+  await turn();
+  assert.deepEqual(
+    gladys.fake.sceneEvents.map((event) => event.key),
+    ['error'],
+  );
+  // A new configuration shows the check again; the failure ends with the
+  // next chat answer.
   await gladys.fake.configUpdated(gladys.fake.config);
-  assert.equal(app.events.state(), null, 'a new configuration starts clean');
+  assert.equal(gladys.fake.connectionStatus.connected, true);
+  assert.notEqual(app.events.state(), null);
   await turn();
   assert.equal(gladys.fake.connectionStatus.connected, false);
   assert.match(gladys.fake.connectionStatus.message.en, /Not enough memory/);
@@ -352,4 +365,14 @@ test('invalid tool calls are dropped, an empty answer is not a server failure', 
   assert.equal(empty.success, false);
   assert.equal(gladys.fake.sceneEvents.length, 0);
   assert.equal(gladys.fake.connectionStatus.connected, true);
+});
+
+test('a front page in 200 on /api/version means "not Ollama"', async () => {
+  const { gladys } = await start({
+    routes: openaiRoutes({ 'GET /api/version': () => json('<!doctype html><html></html>') }),
+    config: { base_url: 'http://192.0.2.10:3000/v1', model: 'local-model' },
+  });
+  assert.equal(gladys.fake.connectionStatus.connected, true);
+  const ack = await gladys.fake.aiChat({ messages: [{ role: 'user', content: 'Hi' }] });
+  assert.equal(ack.success, true);
 });

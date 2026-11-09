@@ -69,10 +69,6 @@ export function createEvents({ publish, now = Date.now }) {
       fire(SCENE_TRIGGERS.RECOVERED, { down_minutes: downMinutes });
       return true;
     },
-    /** Forget the current failure, without trigger (a new configuration). */
-    clear() {
-      failing = null;
-    },
     /** @returns {object|null} The current failure. */
     state() {
       return failing;

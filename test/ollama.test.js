@@ -169,3 +169,13 @@ test('the context estimate warns before Ollama cuts a scene-creation request', a
   });
   assert.ok(estimate > 11_000 && estimate < 12_500, String(estimate));
 });
+
+test('images count as a thousand tokens, not their base64 length', async () => {
+  const { estimateTokens } = await import('../src/chat.js');
+  const image = {
+    type: 'image_url',
+    image_url: { url: `data:image/jpeg;base64,${'A'.repeat(68_000)}` },
+  };
+  const estimate = estimateTokens({ messages: [{ role: 'user', content: [image] }] });
+  assert.ok(estimate > 1000 && estimate < 1100, String(estimate));
+});

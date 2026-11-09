@@ -184,6 +184,7 @@ export function createServerClient({ fetchImpl = globalThis.fetch, now = Date.no
       return raw ? JSON.parse(raw) : {};
     } catch {
       throw new LocalAiError(ERROR_KINDS.SERVER, 'The server answered something else than JSON', {
+        status: response.status,
         model,
       });
     }
@@ -221,7 +222,8 @@ export function createServerClient({ fetchImpl = globalThis.fetch, now = Date.no
           // Only "no such route" says the server is not Ollama. A proxy in
           // 502 while Ollama starts must not send every request to its /v1
           // endpoint, which ignores the context window.
-          if ([400, 404, 405].includes(err.status)) {
+          // A front page in 200 for any route (proxy, web UI) is not Ollama either.
+          if ([400, 404, 405].includes(err.status) || (err.status >= 200 && err.status < 300)) {
             return { kind: 'openai' };
           }
           detected.delete(base);

@@ -244,14 +244,17 @@ export function createApp(
   });
 
   // --- Configuration ------------------------------------------------------------------
-  async function applyConfig(raw) {
+  async function applyConfig(raw, { changed = false } = {}) {
     config = normalizeConfig(raw, hostApiUrl);
     server.reset();
     connected = null;
-    // A fixed configuration starts clean: the next answer tells.
-    events.clear();
-    failureStatus = null;
-    routerFailing = false;
+    // A reconnection to Gladys keeps the failure. A new configuration lets
+    // the status show the check again, but the failure itself ends with the
+    // next answer of the chat, which fires `recovered`.
+    if (changed) {
+      failureStatus = null;
+      routerFailing = false;
+    }
     logger.info(
       `Configuration: server ${safeUrl(config.base_url_resolved)}, chat ${config.model || '(none)'}, ` +
         `router ${modelFor(config, 'router') || '(none)'}, context ${config.context_window}, ` +
@@ -263,7 +266,7 @@ export function createApp(
   }
 
   gladys.onConfigUpdated(async (raw) => {
-    await applyConfig(raw);
+    await applyConfig(raw, { changed: true });
   });
 
   // Each (re)connection re-reads the configuration, which may have changed

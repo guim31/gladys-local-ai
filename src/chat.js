@@ -29,6 +29,7 @@ const logger = createLogger({ name: 'chat' });
 export const ROUTER_TIMEOUT_MS = 18_000;
 /** Characters per token, low on purpose: JSON tool schemas and French text are dense. */
 const CHARS_PER_TOKEN = 3.5;
+const TOKENS_PER_IMAGE = 1000;
 /** The bounds the core applies to a completion (validateAiCompletion of the SDK). */
 const MAX_TOOL_CALLS = 20;
 const MAX_ARGUMENTS_CHARS = 100_000;
@@ -43,9 +44,17 @@ const MAX_CONTENT_CHARS = 50_000;
  * @returns {number} The estimate.
  */
 export function estimateTokens(request) {
-  const chars =
-    JSON.stringify(request?.messages ?? []).length + JSON.stringify(request?.tools ?? []).length;
-  return Math.round(chars / CHARS_PER_TOKEN);
+  let images = 0;
+  // An image costs the model about a thousand tokens, not its base64 length.
+  const messages = JSON.stringify(request?.messages ?? [], (key, value) => {
+    if (value?.type === 'image_url') {
+      images += 1;
+      return undefined;
+    }
+    return value;
+  });
+  const chars = messages.length + JSON.stringify(request?.tools ?? []).length;
+  return Math.round(chars / CHARS_PER_TOKEN) + images * TOKENS_PER_IMAGE;
 }
 
 /**
