@@ -31,16 +31,20 @@ pushing.
 ## Architecture
 
 ```
-index.js                          SDK wiring only: handlers registered before connect()
-src/devices/index.js              registry of the device blueprints + dispatch helpers
-src/devices/<type>.js             one device type per file (buildDevice, onPoll, onSetValue...)
-src/scenes.js                     scene action handlers (manifest `scene_actions`)
-src/widgets.js                    dashboard widget handlers (manifest `widgets`)
-src/config.js                     DEFAULT_CONFIG (mirrors the manifest defaults) + normalization
-src/weather.js                    example driver (Open-Meteo)
-gladys-assistant-integration.json manifest: name, config_schema, actions, image...
-docs/en.md, docs/fr.md            user documentation, re-hosted by Gladys (mandatory)
-test/                             node --test, against the SDK's fake Gladys (integration-sdk/testing)
+index.js                          SDK wiring only: createApp(gladys), then connect()
+src/app.js                        every handler: onAiChat, actions, scene actions, widget, config, status
+src/chat.js                       the onAiChat handler: model per purpose, capabilities, timeouts, no content logged
+src/server.js                     HTTP client of the model server: Ollama detection, models, chat, load/unload, errors
+src/ollama.js                     OpenAI chat completion <-> Ollama native /api/chat translation
+src/connection.js                 connection status, "Test the models" and "List the models" actions
+src/events.js                     failure tracking, scene triggers `error` / `recovered`
+src/widgets.js                    dashboard widget `server`
+src/i18n.js                       runtime texts in en/fr/de/es
+src/config.js                     DEFAULT_CONFIG (mirrors the manifest defaults) + normalization, base URL rules
+gladys-assistant-integration.json manifest: type ai, config_schema, actions, widget, triggers, scene actions
+docs/{en,fr,de,es}.md             user documentation, re-hosted by Gladys (same sections)
+test/                             node --test, fake Gladys of the SDK + fake model server (test/helpers)
+test/fixtures/ollama.json         real answers of Ollama 0.40.15
 .github/scripts/release.mjs       release helpers (manifest bump, changelog), tested in test/
 ```
 
@@ -251,3 +255,25 @@ long, et sur un « Sie »/« Ihr… » de politesse en allemand. Le store exige 
 - Docs `en`, `fr`, `de`, `es` avec les mêmes sections.
 - Chauffe, ouverture, sécurité : ne rien rendre pilotable « comme un thermostat » ou par un assistant
   vocal quand une erreur serait dangereuse (leçon d'OctoPrint).
+
+## Intégration IA locale (gladys-local-ai)
+
+Vérifié contre un vrai Ollama 0.40.15 (image `ollama/ollama`, processeur, qwen2.5 1.5b/0.5b, gemma3:270m) le 09/11/2026.
+
+- **L’API compatible OpenAI d’Ollama (`/v1/chat/completions`) ignore `options.num_ctx` et `keep_alive`** : le modèle
+  se charge avec son contexte par défaut (4096, `context_length` de `/api/ps`) et 5 min de maintien. Une requête de
+  création de scène de Gladys fait 10 à 15 k jetons : Ollama coupe en silence le début (prompt système et outils).
+  D’où l’API native `/api/chat` dès que `GET <racine>/api/version` répond (`src/ollama.js` traduit). Une requête
+  `/v1` après une requête native recharge le modèle (contexte différent) : ne jamais mélanger les deux.
+- Ollama natif : `tool_calls[].function.arguments` est un **objet** (chaîne côté OpenAI), les appels ont un `id`
+  (`call_xxxxxxxx`) ; un résultat d’outil accepte `tool_call_id` et `tool_name`. Images en base64 brut dans `images`.
+  `think` n’est envoyé qu’à un modèle dont `/api/show` liste `thinking` ; `keep_alive` « toujours » vaut le nombre
+  `-1`, décharger = `POST /api/generate { model, keep_alive: 0 }`.
+- Un modèle sans outils : Ollama répond 400 `registry.ollama.ai/library/gemma3:270m does not support tools` ; on le
+  détecte avant par `/api/show` (`capabilities`) pour une erreur claire et sans requête.
+- `/v1/models` liste les noms avec étiquette (`qwen2.5:1.5b`) ; un nom sans étiquette vaut `:latest`.
+- Adresse par défaut : nom d’hôte de `GLADYS_HOST_API_URL` (passerelle `172.30.0.1` en installation standard),
+  port 11434. Ollama n’écoute que sur `127.0.0.1` par défaut : la doc donne `OLLAMA_HOST=172.30.0.1:11434` et
+  `After=docker.service`.
+- Temps mesurés sur 4 cœurs : premier chat 53 s (chargement à 16k de contexte), appel d’outil 22 s, routeur 0.5b 5 s.
+- Rien des conversations dans les journaux, à aucun niveau ; un test vérifie qu’un cycle normal n’écrit rien en info.

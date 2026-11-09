@@ -1,33 +1,62 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeConfig, DEFAULT_CONFIG } from '../src/config.js';
+import {
+  DEFAULT_CONFIG,
+  defaultBaseUrl,
+  modelFor,
+  normalizeBaseUrl,
+  normalizeConfig,
+  safeUrl,
+} from '../src/config.js';
 
-test('normalizeConfig returns the defaults when called with no argument', () => {
-  assert.deepEqual(normalizeConfig(), DEFAULT_CONFIG);
+test('the default address is Ollama on the host of Gladys', () => {
+  assert.equal(defaultBaseUrl('http://172.30.0.1:1443'), 'http://172.30.0.1:11434/v1');
+  assert.equal(defaultBaseUrl('http://172.31.5.1:1443'), 'http://172.31.5.1:11434/v1');
+  assert.equal(defaultBaseUrl(undefined), 'http://172.30.0.1:11434/v1');
+  assert.equal(
+    normalizeConfig({}, 'http://host.docker.internal:1443').base_url_resolved,
+    'http://host.docker.internal:11434/v1',
+  );
 });
 
-test('normalizeConfig keeps user values over the defaults', () => {
-  const config = normalizeConfig({ latitude: 45.5, longitude: -73.6, unit: 'fahrenheit' });
-  assert.equal(config.latitude, 45.5);
-  assert.equal(config.longitude, -73.6);
-  assert.equal(config.unit, 'fahrenheit');
+test('typed addresses: scheme and /v1 added, trailing slash removed, junk refused', () => {
+  const host = 'http://172.30.0.1:1443';
+  assert.equal(normalizeBaseUrl('192.0.2.5:1234', host), 'http://192.0.2.5:1234/v1');
+  assert.equal(normalizeBaseUrl('http://192.0.2.5:8080/', host), 'http://192.0.2.5:8080/v1');
+  assert.equal(normalizeBaseUrl('https://ai.example.org/v1/', host), 'https://ai.example.org/v1');
+  assert.equal(normalizeBaseUrl('http://192.0.2.5/proxy/v1', host), 'http://192.0.2.5/proxy/v1');
+  assert.equal(normalizeBaseUrl('ftp://192.0.2.5', host), null);
+  assert.equal(normalizeBaseUrl('http://', host), null);
+  assert.equal(normalizeBaseUrl('http://user:pass@192.0.2.5:8080/v1', host), null);
+  assert.equal(normalizeBaseUrl('  ', host), 'http://172.30.0.1:11434/v1');
 });
 
-test('normalizeConfig coerces numeric strings coming from a form', () => {
-  const config = normalizeConfig({ latitude: '48.8', longitude: '2.3', poll_frequency: '600' });
-  assert.equal(config.latitude, 48.8);
-  assert.equal(config.longitude, 2.3);
-  assert.equal(config.poll_frequency, 600);
-  assert.equal(typeof config.poll_frequency, 'number');
+test('numbers are clamped, unknown values fall back to the defaults', () => {
+  const config = normalizeConfig({
+    context_window: '999999',
+    timeout_seconds: '5',
+    keep_alive: 'forever',
+    thinking: 'true',
+    model: ' qwen3:8b ',
+  });
+  assert.equal(config.context_window, 262144);
+  assert.equal(config.timeout_seconds, 20);
+  assert.equal(config.keep_alive, DEFAULT_CONFIG.keep_alive);
+  assert.equal(config.thinking, true);
+  assert.equal(config.model, 'qwen3:8b');
+  const defaults = normalizeConfig(null);
+  assert.equal(defaults.context_window, 16384);
+  assert.equal(defaults.timeout_seconds, 110);
+  assert.equal(defaults.thinking, false);
 });
 
-test('normalizeConfig falls back to the default for a missing numeric field', () => {
-  const config = normalizeConfig({ unit: 'celsius' });
-  assert.equal(config.poll_frequency, DEFAULT_CONFIG.poll_frequency);
+test('the router falls back to the chat model', () => {
+  assert.equal(modelFor({ model: 'a', fast_model: '' }, 'router'), 'a');
+  assert.equal(modelFor({ model: 'a', fast_model: 'b' }, 'router'), 'b');
+  assert.equal(modelFor({ model: 'a', fast_model: 'b' }, 'chat'), 'a');
 });
 
-test('GLADYS_PREFER_LOCAL defaults to true and only an explicit false disables it', () => {
-  assert.equal(normalizeConfig().GLADYS_PREFER_LOCAL, true);
-  assert.equal(normalizeConfig({ GLADYS_PREFER_LOCAL: true }).GLADYS_PREFER_LOCAL, true);
-  assert.equal(normalizeConfig({ GLADYS_PREFER_LOCAL: false }).GLADYS_PREFER_LOCAL, false);
+test('addresses are logged without credentials', () => {
+  assert.equal(safeUrl('http://user:pass@192.0.2.5:8080/v1'), 'http://192.0.2.5:8080/v1');
+  assert.equal(safeUrl(null), '(invalid address)');
 });

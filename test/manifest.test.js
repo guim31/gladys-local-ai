@@ -7,10 +7,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { DEVICE_BLUEPRINTS, SCENE_TRIGGER_KEYS } from '../src/devices/index.js';
-import { SCENE_ACTIONS } from '../src/scenes.js';
-import { WIDGETS } from '../src/widgets.js';
-import { DEFAULT_CONFIG } from '../src/config.js';
+import { ACTIONS, SCENE_ACTIONS } from '../src/app.js';
+import { SCENE_TRIGGERS } from '../src/events.js';
+import { ERROR_KINDS } from '../src/server.js';
+import { WIDGETS, WIDGET_ACTIONS } from '../src/widgets.js';
+import { DEFAULT_CONFIG, KEEP_ALIVE_VALUES } from '../src/config.js';
 
 const manifest = JSON.parse(
   await readFile(new URL('../gladys-assistant-integration.json', import.meta.url), 'utf8'),
@@ -28,9 +29,6 @@ const allFields = [
   ].flatMap((item) => item.fields ?? []),
   ...(manifest.widgets ?? []).flatMap((widget) => widget.settings ?? []),
 ];
-
-// Actions registered outside the blueprints (see index.js).
-const REGISTRY_LEVEL_ACTIONS = ['identify'];
 
 // Manifest fields older Gladys releases reject as unknown, with the first
 // release accepting them. The store validator refuses a manifest whose
@@ -57,14 +55,42 @@ function isAtLeast(version, required) {
   return true;
 }
 
-test('every manifest action has a registered handler', () => {
-  const handled = new Set([
-    ...DEVICE_BLUEPRINTS.flatMap((bp) => Object.keys(bp.actions ?? {})),
-    ...REGISTRY_LEVEL_ACTIONS,
-  ]);
-  for (const action of manifest.actions ?? []) {
-    assert.ok(handled.has(action.key), `manifest action "${action.key}" has no handler`);
-  }
+test('every manifest action has a handler, and vice versa', () => {
+  assert.deepEqual(keysOf(manifest.actions).sort(), Object.values(ACTIONS).sort());
+});
+
+test('an AI provider for the assistants shelf, local only, for Gladys 5.3', () => {
+  assert.equal(manifest.type, 'ai');
+  assert.deepEqual(manifest.categories, ['assistants']);
+  assert.deepEqual(manifest.transports, ['local']);
+  // `keywords` and the `ai` type arrived with Gladys 5.3.0.
+  assert.ok(isAtLeast(minGladysVersion(), [5, 3, 0]), manifest.gladys_version);
+  assert.match(manifest.docker_image, /^ghcr\.io\/guim31\/gladys-local-ai:/);
+  assert.equal(
+    manifest.cover_image,
+    'https://raw.githubusercontent.com/guim31/gladys-local-ai/main/cover.png',
+  );
+});
+
+test('the trigger filter offers every failure kind the code reports, and only those', () => {
+  const trigger = manifest.scene_triggers.find((entry) => entry.key === SCENE_TRIGGERS.ERROR);
+  const options = trigger.fields.find((field) => field.key === 'kind').options.map((o) => o.value);
+  const kinds = Object.values(ERROR_KINDS).filter((kind) => kind !== ERROR_KINDS.REQUEST);
+  assert.deepEqual(options.sort(), kinds.sort());
+});
+
+test('the keep_alive options are the values the code accepts', () => {
+  const field = manifest.config_schema.find((entry) => entry.key === 'keep_alive');
+  assert.deepEqual(
+    field.options.map((option) => option.value),
+    KEEP_ALIVE_VALUES,
+  );
+});
+
+test('widget buttons and settings keys are stable', () => {
+  assert.deepEqual(Object.values(WIDGET_ACTIONS), ['load_model', 'unload_models']);
+  const widget = manifest.widgets.find((entry) => entry.key === WIDGETS.SERVER);
+  assert.deepEqual(keysOf(widget.settings), ['show_buttons']);
 });
 
 test('declaring catalog categories requires Gladys >= 4.86.0', () => {
@@ -91,34 +117,19 @@ test('declaring scene triggers, scene actions or widgets requires Gladys >= 5.1.
 
 test('every scene_actions key has an onSceneAction handler, and vice versa', () => {
   const declared = keysOf(manifest.scene_actions);
-  for (const key of declared) {
-    assert.equal(typeof SCENE_ACTIONS[key], 'function', `scene action "${key}" has no handler`);
-  }
-  for (const key of Object.keys(SCENE_ACTIONS)) {
-    assert.ok(declared.includes(key), `handler "${key}" is not declared in scene_actions`);
-  }
+  assert.deepEqual(declared.sort(), Object.values(SCENE_ACTIONS).sort());
 });
 
 test('every widgets key has an onWidgetGet handler, and vice versa', () => {
   const declared = keysOf(manifest.widgets);
-  for (const key of declared) {
-    assert.equal(typeof WIDGETS[key]?.get, 'function', `widget "${key}" has no content handler`);
-  }
-  for (const key of Object.keys(WIDGETS)) {
-    assert.ok(declared.includes(key), `widget "${key}" is not declared in widgets`);
-  }
+  assert.deepEqual(declared.sort(), Object.values(WIDGETS).sort());
 });
 
 test('every scene trigger the code fires is declared in scene_triggers, and vice versa', () => {
   // An undeclared key is a 404 on publishSceneEvent; a declared key nobody
   // fires is a dead card in the scene editor.
   const declared = keysOf(manifest.scene_triggers);
-  for (const key of SCENE_TRIGGER_KEYS) {
-    assert.ok(declared.includes(key), `trigger "${key}" is fired but not declared`);
-  }
-  for (const key of declared) {
-    assert.ok(SCENE_TRIGGER_KEYS.includes(key), `trigger "${key}" is declared but never fired`);
-  }
+  assert.deepEqual(declared.sort(), Object.values(SCENE_TRIGGERS).sort());
 });
 
 test('config_schema defaults stay consistent with DEFAULT_CONFIG', () => {
@@ -155,19 +166,6 @@ test('section fields are purely presentational', () => {
     for (const link of section.links ?? []) {
       assert.match(link.url, /^https:\/\//, 'section links must be https');
     }
-  }
-});
-
-test('dynamic selects declare a source and no static options', () => {
-  const dynamicSelects = allFields.filter((f) => f.source !== undefined);
-  assert.ok(dynamicSelects.length > 0, 'the template demonstrates a dynamic select');
-  for (const field of dynamicSelects) {
-    assert.equal(field.source, 'devices', 'the only core-defined source in V1 is "devices"');
-    assert.equal(
-      field.options,
-      undefined,
-      `field "${field.key}": declaring source and options together rejects the manifest`,
-    );
   }
 });
 

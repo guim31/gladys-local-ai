@@ -1,8 +1,8 @@
 {
-  "name": "gladys-integration-template-js",
+  "name": "gladys-local-ai",
   "version": "1.0.0",
   "private": true,
-  "description": "Official starter template to build an external integration for Gladys Assistant with the JavaScript SDK.",
+  "description": "Gladys Assistant external integration: runs the Gladys AI assistant on a local model (Ollama, LM Studio, llama.cpp, LocalAI, vLLM) through the OpenAI API or the native Ollama API.",
   "type": "module",
   "main": "index.js",
   "scripts": {

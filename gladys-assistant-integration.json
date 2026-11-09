@@ -1,177 +1,623 @@
 {
   "manifest_version": 1,
-  "type": "device",
-  "name": "Demo Devices Template",
+  "type": "ai",
+  "name": "Local AI",
   "description": {
-    "en": "Starter template showing sensors, a switch, a dimmable light and a smart plug.",
-    "fr": "Template de démarrage : capteurs, interrupteur, lampe variable et prise connectée."
+    "en": "Run the Gladys assistant on a model at home: Ollama, LM Studio, llama.cpp, LocalAI, vLLM.",
+    "fr": "L’assistant Gladys sur un modèle chez vous : Ollama, LM Studio, llama.cpp, LocalAI, vLLM.",
+    "de": "Der Gladys-Assistent mit einem Modell bei dir zu Hause: Ollama, LM Studio, llama.cpp, LocalAI, vLLM.",
+    "es": "El asistente de Gladys con un modelo en su casa: Ollama, LM Studio, llama.cpp, LocalAI, vLLM."
   },
   "version": "1.0.0",
-  "docker_image": "ghcr.io/gladysassistant/integration-template-js:1.0.0",
-  "gladys_version": ">=5.1.0",
-  "cover_image": "https://raw.githubusercontent.com/GladysAssistant/integration-template-js/master/cover.png",
-  "categories": ["lighting", "security", "environment"],
-  "transports": ["local", "cloud"],
+  "docker_image": "ghcr.io/guim31/gladys-local-ai:1.0.0",
+  "gladys_version": ">=5.3.0",
+  "categories": ["assistants"],
+  "keywords": [
+    "ollama",
+    "lm studio",
+    "llama.cpp",
+    "localai",
+    "vllm",
+    "llm",
+    "local llm",
+    "offline",
+    "qwen",
+    "llama"
+  ],
+  "cover_image": "https://raw.githubusercontent.com/guim31/gladys-local-ai/main/cover.png",
+  "transports": ["local"],
   "config_schema": [
     {
       "key": "intro",
       "type": "section",
-      "label": { "en": "Getting started", "fr": "Pour commencer" },
+      "label": {
+        "en": "Getting started",
+        "fr": "Pour commencer",
+        "de": "Erste Schritte",
+        "es": "Primeros pasos"
+      },
       "description": {
-        "en": "The demo weather station reads real data from the free Open-Meteo API: pick the coordinates to observe. No account, no API key.",
-        "fr": "La station météo de démonstration lit de vraies données via l'API gratuite Open-Meteo : choisissez les coordonnées à observer. Pas de compte, pas de clé d'API."
+        "en": "Install Ollama on the machine that runs Gladys, make it listen on 172.30.0.1 (OLLAMA_HOST=172.30.0.1:11434), pull a model that calls tools (ollama pull qwen3:8b) and type its name below; leave the address empty. Then select this integration in Settings, Artificial Intelligence. Any OpenAI-compatible server works too: give its address.",
+        "fr": "Installez Ollama sur la machine de Gladys, faites-le écouter sur 172.30.0.1 (OLLAMA_HOST=172.30.0.1:11434), téléchargez un modèle qui appelle des outils (ollama pull qwen3:8b) et saisissez son nom ci-dessous ; laissez l’adresse vide. Choisissez ensuite cette intégration dans Paramètres, Intelligence artificielle. Tout serveur compatible OpenAI convient aussi : indiquez son adresse.",
+        "de": "Installiere Ollama auf dem Rechner von Gladys, lass es auf 172.30.0.1 lauschen (OLLAMA_HOST=172.30.0.1:11434), lade ein Modell, das Tools aufruft (ollama pull qwen3:8b), und gib unten seinen Namen ein; lass die Adresse leer. Wähle dann diese Integration unter Einstellungen, Künstliche Intelligenz. Jeder OpenAI-kompatible Server geht auch: Gib seine Adresse an.",
+        "es": "Instale Ollama en la máquina de Gladys, haga que escuche en 172.30.0.1 (OLLAMA_HOST=172.30.0.1:11434), descargue un modelo que llame a herramientas (ollama pull qwen3:8b) y escriba su nombre abajo; deje la dirección vacía. Luego elija esta integración en Ajustes, Inteligencia artificial. Cualquier servidor compatible con OpenAI también sirve: indique su dirección."
       },
       "links": [
         {
-          "url": "https://open-meteo.com/en/docs",
-          "label": { "en": "Open-Meteo documentation", "fr": "Documentation Open-Meteo" }
+          "url": "https://ollama.com/download",
+          "label": {
+            "en": "Download Ollama",
+            "fr": "Télécharger Ollama",
+            "de": "Ollama herunterladen",
+            "es": "Descargar Ollama"
+          }
+        },
+        {
+          "url": "https://ollama.com/search?c=tools",
+          "label": {
+            "en": "Models that call tools",
+            "fr": "Modèles qui appellent des outils",
+            "de": "Modelle, die Tools aufrufen",
+            "es": "Modelos que llaman a herramientas"
+          }
+        },
+        {
+          "url": "https://github.com/guim31/gladys-local-ai/blob/main/docs/en.md",
+          "label": {
+            "en": "Integration documentation",
+            "fr": "Documentation de l’intégration",
+            "de": "Dokumentation der Integration",
+            "es": "Documentación de la integración"
+          }
         }
       ]
     },
     {
-      "key": "latitude",
-      "type": "number",
-      "label": { "en": "Latitude", "fr": "Latitude" },
-      "description": {
-        "en": "Latitude used for the demo weather sensor.",
-        "fr": "Latitude utilisée par le capteur météo de démonstration."
+      "key": "privacy",
+      "type": "section",
+      "label": {
+        "en": "Privacy and hardware",
+        "fr": "Confidentialité et matériel",
+        "de": "Datenschutz und Hardware",
+        "es": "Privacidad y hardware"
       },
-      "placeholder": { "en": "e.g. 48.8566", "fr": "ex. 48.8566" },
-      "required": true,
-      "default": 48.8566,
-      "min": -90,
-      "max": 90
+      "description": {
+        "en": "Conversations stay on your network. Ollama has no password: every installed integration can reach it on 172.30.0.1. A small model on a CPU answers slowly and creates scenes less reliably: 16 GB of RAM for an 8B model is a good start, a graphics card makes it much faster.",
+        "fr": "Les conversations restent sur votre réseau. Ollama n’a pas de mot de passe : toute intégration installée peut le joindre sur 172.30.0.1. Un petit modèle sur processeur répond lentement et crée les scènes moins bien : 16 Go de RAM pour un modèle 8B est un bon départ, une carte graphique le rend bien plus rapide.",
+        "de": "Die Unterhaltungen bleiben in deinem Netzwerk. Ollama hat kein Passwort: Jede installierte Integration erreicht es über 172.30.0.1. Ein kleines Modell auf der CPU antwortet langsam und erstellt Szenen weniger zuverlässig: 16 GB RAM für ein 8B-Modell sind ein guter Anfang, eine Grafikkarte macht es viel schneller.",
+        "es": "Las conversaciones se quedan en su red. Ollama no tiene contraseña: cualquier integración instalada puede acceder a él en 172.30.0.1. Un modelo pequeño en el procesador responde despacio y crea las escenas peor: 16 GB de RAM para un modelo 8B es un buen comienzo, una tarjeta gráfica lo hace mucho más rápido."
+      }
     },
     {
-      "key": "longitude",
-      "type": "number",
-      "label": { "en": "Longitude", "fr": "Longitude" },
-      "description": {
-        "en": "Longitude used for the demo weather sensor.",
-        "fr": "Longitude utilisée par le capteur météo de démonstration."
+      "key": "base_url",
+      "type": "string",
+      "label": {
+        "en": "Server address",
+        "fr": "Adresse du serveur",
+        "de": "Serveradresse",
+        "es": "Dirección del servidor"
       },
-      "placeholder": { "en": "e.g. 2.3522", "fr": "ex. 2.3522" },
-      "required": true,
-      "default": 2.3522,
-      "min": -180,
-      "max": 180
+      "description": {
+        "en": "Empty: Ollama on the machine of Gladys. Otherwise the OpenAI API address of the server, e.g. http://192.168.1.20:1234/v1 for LM Studio, :8080/v1 for llama.cpp.",
+        "fr": "Vide : Ollama sur la machine de Gladys. Sinon l’adresse de l’API OpenAI du serveur, par exemple http://192.168.1.20:1234/v1 pour LM Studio, :8080/v1 pour llama.cpp.",
+        "de": "Leer: Ollama auf dem Rechner von Gladys. Sonst die OpenAI-API-Adresse des Servers, z. B. http://192.168.1.20:1234/v1 für LM Studio, :8080/v1 für llama.cpp.",
+        "es": "Vacía: Ollama en la máquina de Gladys. Si no, la dirección de la API OpenAI del servidor, por ejemplo http://192.168.1.20:1234/v1 para LM Studio, :8080/v1 para llama.cpp."
+      },
+      "placeholder": {
+        "en": "http://172.30.0.1:11434/v1",
+        "fr": "http://172.30.0.1:11434/v1",
+        "de": "http://172.30.0.1:11434/v1",
+        "es": "http://172.30.0.1:11434/v1"
+      },
+      "required": false
     },
     {
-      "key": "unit",
-      "type": "select",
-      "label": { "en": "Temperature unit", "fr": "Unité de température" },
+      "key": "api_key",
+      "type": "secret",
+      "label": {
+        "en": "API key (optional)",
+        "fr": "Clé d’API (facultative)",
+        "de": "API-Schlüssel (optional)",
+        "es": "Clave de API (opcional)"
+      },
+      "description": {
+        "en": "Only when the server asks for one (LocalAI, vLLM, a reverse proxy). Sent as a Bearer token, never logged.",
+        "fr": "Seulement si le serveur en demande une (LocalAI, vLLM, un proxy inverse). Envoyée comme jeton Bearer, jamais journalisée.",
+        "de": "Nur wenn der Server einen verlangt (LocalAI, vLLM, ein Reverse-Proxy). Wird als Bearer-Token gesendet, nie protokolliert.",
+        "es": "Solo si el servidor la pide (LocalAI, vLLM, un proxy inverso). Se envía como token Bearer, nunca se registra."
+      },
+      "required": false
+    },
+    {
+      "key": "model",
+      "type": "string",
+      "label": {
+        "en": "Chat model",
+        "fr": "Modèle du chat",
+        "de": "Chat-Modell",
+        "es": "Modelo del chat"
+      },
+      "description": {
+        "en": "Answers the chat, creates the scenes and writes the weekly digest: it must call tools. Its exact name on the server; the “List the models” button below shows them.",
+        "fr": "Répond au chat, crée les scènes et rédige le résumé hebdomadaire : il doit savoir appeler des outils. Son nom exact sur le serveur ; le bouton « Lister les modèles » ci-dessous les affiche.",
+        "de": "Beantwortet den Chat, erstellt die Szenen und schreibt den Wochenrückblick: Es muss Tools aufrufen können. Sein genauer Name auf dem Server; die Schaltfläche „Modelle auflisten“ unten zeigt sie.",
+        "es": "Responde al chat, crea las escenas y redacta el resumen semanal: debe saber llamar a herramientas. Su nombre exacto en el servidor; el botón «Listar los modelos» de abajo los muestra."
+      },
+      "placeholder": {
+        "en": "qwen3:8b",
+        "fr": "qwen3:8b",
+        "de": "qwen3:8b",
+        "es": "qwen3:8b"
+      },
+      "required": true
+    },
+    {
+      "key": "fast_model",
+      "type": "string",
+      "label": {
+        "en": "Router model (optional)",
+        "fr": "Modèle du routeur (facultatif)",
+        "de": "Router-Modell (optional)",
+        "es": "Modelo del enrutador (opcional)"
+      },
+      "description": {
+        "en": "Sorts every chat message before the answer and must reply within 20 seconds: a small model fits (qwen3:1.7b). Empty: the chat model.",
+        "fr": "Trie chaque message du chat avant la réponse et doit répondre en moins de 20 secondes : un petit modèle convient (qwen3:1.7b). Vide : le modèle du chat.",
+        "de": "Ordnet jede Chat-Nachricht vor der Antwort ein und muss innerhalb von 20 Sekunden antworten: Ein kleines Modell passt (qwen3:1.7b). Leer: das Chat-Modell.",
+        "es": "Clasifica cada mensaje del chat antes de la respuesta y debe contestar en menos de 20 segundos: sirve un modelo pequeño (qwen3:1.7b). Vacío: el modelo del chat."
+      },
+      "placeholder": {
+        "en": "qwen3:1.7b",
+        "fr": "qwen3:1.7b",
+        "de": "qwen3:1.7b",
+        "es": "qwen3:1.7b"
+      },
+      "required": false
+    },
+    {
+      "key": "context_window",
+      "type": "number",
+      "label": {
+        "en": "Context window (tokens, Ollama)",
+        "fr": "Fenêtre de contexte (jetons, Ollama)",
+        "de": "Kontextfenster (Tokens, Ollama)",
+        "es": "Ventana de contexto (tokens, Ollama)"
+      },
+      "description": {
+        "en": "Creating a scene sends 10 to 15 thousand tokens; below, Ollama silently cuts the start of the request. More takes more memory. Other servers set it on their side.",
+        "fr": "Créer une scène envoie 10 à 15 mille jetons ; en dessous, Ollama coupe en silence le début de la requête. Plus prend plus de mémoire. Les autres serveurs le règlent de leur côté.",
+        "de": "Eine Szene zu erstellen sendet 10 bis 15 Tausend Tokens; darunter schneidet Ollama still den Anfang der Anfrage ab. Mehr braucht mehr Speicher. Andere Server stellen es selbst ein.",
+        "es": "Crear una escena envía de 10 a 15 mil tokens; por debajo, Ollama corta en silencio el comienzo de la solicitud. Más ocupa más memoria. Los demás servidores lo ajustan por su lado."
+      },
       "required": false,
-      "default": "celsius",
+      "default": 16384,
+      "min": 2048,
+      "max": 262144
+    },
+    {
+      "key": "keep_alive",
+      "type": "select",
+      "label": {
+        "en": "Keep the model in memory (Ollama)",
+        "fr": "Garder le modèle en mémoire (Ollama)",
+        "de": "Modell im Speicher halten (Ollama)",
+        "es": "Mantener el modelo en memoria (Ollama)"
+      },
+      "description": {
+        "en": "After the last request. Loading a model takes seconds to a minute: longer means faster first answers, but the memory stays taken.",
+        "fr": "Après la dernière requête. Charger un modèle prend de quelques secondes à une minute : plus long donne des premières réponses plus rapides, mais la mémoire reste prise.",
+        "de": "Nach der letzten Anfrage. Ein Modell zu laden dauert Sekunden bis eine Minute: Länger heißt schnellere erste Antworten, aber der Speicher bleibt belegt.",
+        "es": "Tras la última solicitud. Cargar un modelo tarda de unos segundos a un minuto: más tiempo da primeras respuestas más rápidas, pero la memoria sigue ocupada."
+      },
+      "required": false,
+      "default": "30m",
       "options": [
-        { "value": "celsius", "label": { "en": "Celsius", "fr": "Celsius" } },
-        { "value": "fahrenheit", "label": { "en": "Fahrenheit", "fr": "Fahrenheit" } }
+        {
+          "value": "5m",
+          "label": { "en": "5 minutes", "fr": "5 minutes", "de": "5 Minuten", "es": "5 minutos" }
+        },
+        {
+          "value": "30m",
+          "label": {
+            "en": "30 minutes",
+            "fr": "30 minutes",
+            "de": "30 Minuten",
+            "es": "30 minutos"
+          }
+        },
+        {
+          "value": "2h",
+          "label": { "en": "2 hours", "fr": "2 heures", "de": "2 Stunden", "es": "2 horas" }
+        },
+        {
+          "value": "24h",
+          "label": { "en": "24 hours", "fr": "24 heures", "de": "24 Stunden", "es": "24 horas" }
+        },
+        {
+          "value": "-1",
+          "label": { "en": "Always", "fr": "Toujours", "de": "Immer", "es": "Siempre" }
+        }
       ]
     },
     {
-      "key": "poll_frequency",
-      "type": "number",
-      "label": { "en": "Refresh interval (s)", "fr": "Intervalle de rafraîchissement (s)" },
+      "key": "thinking",
+      "type": "boolean",
+      "label": {
+        "en": "Let the chat model think (Ollama)",
+        "fr": "Laisser réfléchir le modèle du chat (Ollama)",
+        "de": "Chat-Modell nachdenken lassen (Ollama)",
+        "es": "Dejar razonar al modelo del chat (Ollama)"
+      },
       "description": {
-        "en": "How often sensors are polled, in seconds (one minute minimum).",
-        "fr": "Fréquence d'interrogation des capteurs, en secondes (une minute minimum)."
+        "en": "For models that reason (qwen3, deepseek-r1…): better scenes, but much slower answers on a CPU. The router never thinks.",
+        "fr": "Pour les modèles qui raisonnent (qwen3, deepseek-r1…) : de meilleures scènes, mais des réponses bien plus lentes sur processeur. Le routeur ne réfléchit jamais.",
+        "de": "Für Modelle, die nachdenken (qwen3, deepseek-r1…): bessere Szenen, aber viel langsamere Antworten auf der CPU. Der Router denkt nie nach.",
+        "es": "Para los modelos que razonan (qwen3, deepseek-r1…): mejores escenas, pero respuestas mucho más lentas en el procesador. El enrutador nunca razona."
       },
       "required": false,
-      "default": 300,
-      "min": 60,
-      "max": 3600
+      "default": false
+    },
+    {
+      "key": "timeout_seconds",
+      "type": "number",
+      "label": {
+        "en": "Answer timeout (seconds)",
+        "fr": "Délai de réponse (secondes)",
+        "de": "Zeitlimit der Antwort (Sekunden)",
+        "es": "Tiempo de espera de la respuesta (segundos)"
+      },
+      "description": {
+        "en": "For the chat model; Gladys waits 120 seconds at most. The router always has 18 seconds.",
+        "fr": "Pour le modèle du chat ; Gladys attend 120 secondes au plus. Le routeur a toujours 18 secondes.",
+        "de": "Für das Chat-Modell; Gladys wartet höchstens 120 Sekunden. Der Router hat immer 18 Sekunden.",
+        "es": "Para el modelo del chat; Gladys espera 120 segundos como máximo. El enrutador siempre tiene 18 segundos."
+      },
+      "required": false,
+      "default": 110,
+      "min": 20,
+      "max": 115
     }
   ],
   "actions": [
     {
-      "key": "test_weather",
-      "label": { "en": "Test the weather provider", "fr": "Tester le fournisseur météo" },
-      "timeout_seconds": 30
+      "key": "test_connection",
+      "timeout_seconds": 120,
+      "label": {
+        "en": "Test the models",
+        "fr": "Tester les modèles",
+        "de": "Modelle testen",
+        "es": "Probar los modelos"
+      },
+      "description": {
+        "en": "Asks each chosen model for a one-word answer and shows its time (the first one loads the model).",
+        "fr": "Demande une réponse d’un mot à chaque modèle choisi et affiche son temps (la première charge le modèle).",
+        "de": "Bittet jedes gewählte Modell um eine Antwort aus einem Wort und zeigt die Zeit (die erste lädt das Modell).",
+        "es": "Pide una respuesta de una palabra a cada modelo elegido y muestra su tiempo (la primera carga el modelo)."
+      }
     },
     {
-      "key": "identify",
-      "label": { "en": "Identify a device", "fr": "Identifier un appareil" },
-      "fields": [
+      "key": "list_models",
+      "timeout_seconds": 20,
+      "label": {
+        "en": "List the models",
+        "fr": "Lister les modèles",
+        "de": "Modelle auflisten",
+        "es": "Listar los modelos"
+      },
+      "description": {
+        "en": "Shows the names of the models on the server, to copy into the fields above.",
+        "fr": "Affiche les noms des modèles du serveur, à recopier dans les champs ci-dessus.",
+        "de": "Zeigt die Namen der Modelle auf dem Server, zum Übernehmen in die Felder oben.",
+        "es": "Muestra los nombres de los modelos del servidor, para copiarlos en los campos de arriba."
+      }
+    }
+  ],
+  "widgets": [
+    {
+      "key": "server",
+      "icon": "cpu",
+      "label": {
+        "en": "Local AI",
+        "fr": "IA locale",
+        "de": "Lokale KI",
+        "es": "IA local"
+      },
+      "description": {
+        "en": "The model server, the models in memory, the last answer time; load or unload the model.",
+        "fr": "Le serveur de modèles, les modèles en mémoire, le temps de réponse ; charger ou décharger le modèle.",
+        "de": "Der Modellserver, die Modelle im Speicher, die letzte Antwortzeit; Modell laden oder entladen.",
+        "es": "El servidor de modelos, los modelos en memoria, el último tiempo de respuesta; cargar o descargar."
+      },
+      "action_timeout_seconds": 120,
+      "settings": [
         {
-          "key": "device",
-          "type": "select",
-          "source": "devices",
-          "label": { "en": "Device", "fr": "Appareil" },
-          "required": true
+          "key": "show_buttons",
+          "type": "boolean",
+          "label": {
+            "en": "Show the load and unload buttons",
+            "fr": "Afficher les boutons charger et décharger",
+            "de": "Schaltflächen Laden und Entladen zeigen",
+            "es": "Mostrar los botones cargar y descargar"
+          },
+          "required": false,
+          "default": true
         }
       ]
     }
   ],
   "scene_triggers": [
     {
-      "key": "motion_detected",
-      "label": { "en": "Motion detected", "fr": "Mouvement détecté" },
+      "key": "error",
+      "label": {
+        "en": "Local AI: the assistant fails",
+        "fr": "IA locale : l’assistant est en panne",
+        "de": "Lokale KI: Der Assistent fällt aus",
+        "es": "IA local: el asistente falla"
+      },
       "description": {
-        "en": "A demo motion sensor saw a person or an animal move.",
-        "fr": "Un détecteur de démonstration a vu bouger une personne ou un animal."
+        "en": "The local model stopped answering: server down, model missing, too slow, not enough memory. Once per failure, not for every message.",
+        "fr": "Le modèle local ne répond plus : serveur arrêté, modèle absent, trop lent, mémoire insuffisante. Une fois par panne, pas à chaque message.",
+        "de": "Das lokale Modell antwortet nicht mehr: Server aus, Modell fehlt, zu langsam, zu wenig Speicher. Einmal pro Ausfall, nicht bei jeder Nachricht.",
+        "es": "El modelo local ya no responde: servidor parado, modelo ausente, demasiado lento, memoria insuficiente. Una vez por fallo, no en cada mensaje."
       },
       "fields": [
         {
-          "key": "device",
+          "key": "kind",
           "type": "select",
-          "source": "devices",
-          "label": { "en": "Sensor", "fr": "Détecteur" }
-        },
-        {
-          "key": "target",
-          "type": "multi_select",
-          "label": { "en": "What moved", "fr": "Ce qui a bougé" },
+          "required": false,
+          "label": {
+            "en": "Only for",
+            "fr": "Seulement pour",
+            "de": "Nur bei",
+            "es": "Solo para"
+          },
+          "description": {
+            "en": "Leave empty for any failure.",
+            "fr": "Laissez vide pour toute panne.",
+            "de": "Leer lassen für jeden Ausfall.",
+            "es": "Déjelo vacío para cualquier fallo."
+          },
           "options": [
-            { "value": "person", "label": { "en": "Person", "fr": "Personne" } },
-            { "value": "animal", "label": { "en": "Animal", "fr": "Animal" } }
+            {
+              "value": "unreachable",
+              "label": {
+                "en": "Server unreachable",
+                "fr": "Serveur injoignable",
+                "de": "Server unerreichbar",
+                "es": "Servidor inaccesible"
+              }
+            },
+            {
+              "value": "timeout",
+              "label": {
+                "en": "Too slow",
+                "fr": "Trop lent",
+                "de": "Zu langsam",
+                "es": "Demasiado lento"
+              }
+            },
+            {
+              "value": "model",
+              "label": {
+                "en": "Model missing",
+                "fr": "Modèle absent",
+                "de": "Modell fehlt",
+                "es": "Modelo ausente"
+              }
+            },
+            {
+              "value": "tools",
+              "label": {
+                "en": "Model without tool calling",
+                "fr": "Modèle sans appel d’outils",
+                "de": "Modell ohne Tool-Aufrufe",
+                "es": "Modelo sin llamada a herramientas"
+              }
+            },
+            {
+              "value": "memory",
+              "label": {
+                "en": "Not enough memory",
+                "fr": "Mémoire insuffisante",
+                "de": "Zu wenig Speicher",
+                "es": "Memoria insuficiente"
+              }
+            },
+            {
+              "value": "auth",
+              "label": {
+                "en": "Key refused",
+                "fr": "Clé refusée",
+                "de": "Schlüssel abgelehnt",
+                "es": "Clave rechazada"
+              }
+            },
+            {
+              "value": "server",
+              "label": {
+                "en": "Server error",
+                "fr": "Erreur du serveur",
+                "de": "Serverfehler",
+                "es": "Error del servidor"
+              }
+            },
+            {
+              "value": "config",
+              "label": {
+                "en": "Configuration",
+                "fr": "Configuration",
+                "de": "Konfiguration",
+                "es": "Configuración"
+              }
+            }
           ]
         }
       ],
       "variables": [
         {
-          "key": "target",
+          "key": "kind",
           "type": "string",
-          "label": { "en": "What moved", "fr": "Ce qui a bougé" }
+          "label": {
+            "en": "Kind of failure",
+            "fr": "Type de panne",
+            "de": "Art des Ausfalls",
+            "es": "Tipo de fallo"
+          }
+        },
+        {
+          "key": "message",
+          "type": "string",
+          "label": {
+            "en": "Error message",
+            "fr": "Message d’erreur",
+            "de": "Fehlermeldung",
+            "es": "Mensaje de error"
+          }
+        },
+        {
+          "key": "use",
+          "type": "string",
+          "label": {
+            "en": "Request (chat, router, digest)",
+            "fr": "Requête (chat, router, digest)",
+            "de": "Anfrage (chat, router, digest)",
+            "es": "Solicitud (chat, router, digest)"
+          }
+        },
+        {
+          "key": "model",
+          "type": "string",
+          "label": { "en": "Model", "fr": "Modèle", "de": "Modell", "es": "Modelo" }
+        }
+      ]
+    },
+    {
+      "key": "recovered",
+      "label": {
+        "en": "Local AI: the assistant answers again",
+        "fr": "IA locale : l’assistant répond de nouveau",
+        "de": "Lokale KI: Der Assistent antwortet wieder",
+        "es": "IA local: el asistente vuelve a responder"
+      },
+      "description": {
+        "en": "The first answer after a failure.",
+        "fr": "La première réponse après une panne.",
+        "de": "Die erste Antwort nach einem Ausfall.",
+        "es": "La primera respuesta tras un fallo."
+      },
+      "variables": [
+        {
+          "key": "down_minutes",
+          "type": "number",
+          "label": {
+            "en": "Minutes of failure",
+            "fr": "Minutes de panne",
+            "de": "Minuten des Ausfalls",
+            "es": "Minutos de fallo"
+          }
         }
       ]
     }
   ],
   "scene_actions": [
     {
-      "key": "identify_device",
-      "label": { "en": "Identify a device", "fr": "Identifier un appareil" },
-      "description": {
-        "en": "Make a device signal itself (the demo light blinks).",
-        "fr": "Fait se signaler un appareil (la lampe de démonstration clignote)."
+      "key": "load_model",
+      "timeout_seconds": 120,
+      "label": {
+        "en": "Local AI: load the model in memory",
+        "fr": "IA locale : charger le modèle en mémoire",
+        "de": "Lokale KI: Modell in den Speicher laden",
+        "es": "IA local: cargar el modelo en memoria"
       },
-      "timeout_seconds": 15,
+      "description": {
+        "en": "Ollama only. Before you usually talk to Gladys (waking up, coming home): the first answer is then quick.",
+        "fr": "Ollama seulement. Avant les moments où vous parlez à Gladys (réveil, retour) : la première réponse est alors rapide.",
+        "de": "Nur Ollama. Bevor du meist mit Gladys sprichst (Aufstehen, Heimkommen): Die erste Antwort kommt dann schnell.",
+        "es": "Solo Ollama. Antes de los momentos en que habla con Gladys (al despertar, al volver): la primera respuesta es rápida."
+      },
       "fields": [
         {
-          "key": "device",
+          "key": "model",
           "type": "select",
-          "source": "devices",
-          "label": { "en": "Device", "fr": "Appareil" },
-          "required": true
+          "required": false,
+          "label": {
+            "en": "Model",
+            "fr": "Modèle",
+            "de": "Modell",
+            "es": "Modelo"
+          },
+          "description": {
+            "en": "Empty: the chat model.",
+            "fr": "Vide : le modèle du chat.",
+            "de": "Leer: das Chat-Modell.",
+            "es": "Vacío: el modelo del chat."
+          },
+          "options": [
+            {
+              "value": "chat",
+              "label": {
+                "en": "Chat model",
+                "fr": "Modèle du chat",
+                "de": "Chat-Modell",
+                "es": "Modelo del chat"
+              }
+            },
+            {
+              "value": "router",
+              "label": {
+                "en": "Router model",
+                "fr": "Modèle du routeur",
+                "de": "Router-Modell",
+                "es": "Modelo del enrutador"
+              }
+            },
+            {
+              "value": "both",
+              "label": { "en": "Both", "fr": "Les deux", "de": "Beide", "es": "Ambos" }
+            }
+          ]
         }
       ],
       "outputs": [
         {
-          "key": "signalled",
-          "type": "boolean",
-          "label": { "en": "Device signalled", "fr": "Appareil signalé" }
+          "key": "seconds",
+          "type": "number",
+          "label": {
+            "en": "Loading time (s)",
+            "fr": "Temps de chargement (s)",
+            "de": "Ladezeit (s)",
+            "es": "Tiempo de carga (s)"
+          }
         }
       ]
-    }
-  ],
-  "widgets": [
+    },
     {
-      "key": "demo_status",
-      "label": { "en": "Demo status", "fr": "État de la démo" },
-      "description": {
-        "en": "Live temperature and plug power, plug connection and observed location.",
-        "fr": "Température et puissance en direct, connexion de la prise, position observée."
+      "key": "unload_models",
+      "timeout_seconds": 30,
+      "label": {
+        "en": "Local AI: free the memory",
+        "fr": "IA locale : libérer la mémoire",
+        "de": "Lokale KI: Speicher freigeben",
+        "es": "IA local: liberar la memoria"
       },
-      "icon": "activity",
-      "action_timeout_seconds": 15
+      "description": {
+        "en": "Ollama only. Unloads every model, e.g. at night or before a game on the same machine.",
+        "fr": "Ollama seulement. Décharge tous les modèles, par exemple la nuit ou avant un jeu sur la même machine.",
+        "de": "Nur Ollama. Entlädt alle Modelle, z. B. nachts oder vor einem Spiel auf demselben Rechner.",
+        "es": "Solo Ollama. Descarga todos los modelos, por ejemplo de noche o antes de un juego en la misma máquina."
+      },
+      "outputs": [
+        {
+          "key": "count",
+          "type": "number",
+          "label": {
+            "en": "Models unloaded",
+            "fr": "Modèles déchargés",
+            "de": "Entladene Modelle",
+            "es": "Modelos descargados"
+          }
+        }
+      ]
     }
   ]
 }

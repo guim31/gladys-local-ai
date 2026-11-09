@@ -1,61 +1,128 @@
-# Demo Devices Template
+# Local AI
 
-This is the user documentation of the integration. Gladys re-hosts this file
-and shows a permanent **Documentation** link to it in the Configuration screen
-(in the user's language, with English as the fallback) — it is when
-configuring that the user needs it most. Keep the short onboarding hints in
-the `section` blocks of the manifest `config_schema`; put the long
-step-by-step (screenshots, troubleshooting…) here.
+Run the Gladys assistant on a model at home instead of Gladys Plus: the chat, the scene creation, the `ai.ask` scene
+action and the weekly digest are answered by **Ollama** or any server that speaks the OpenAI API (**LM Studio**,
+**llama.cpp**, **LocalAI**, **vLLM**…). Conversations do not leave your network and no Gladys Plus account is needed.
+
+Tested for real with Ollama 0.40.15 (CPU, small models). LM Studio, llama.cpp, LocalAI and vLLM are compatible through
+the OpenAI API but were not tested: feedback welcome.
 
 ## What you get
 
-Six demo devices show up after installation: a weather station (real data
-from Open-Meteo), a switch, a dimmable light, a smart plug with power
-metering, a motion sensor and a camera.
+- An **AI provider** for Gladys 5.3: once selected in **Settings → Artificial Intelligence**, every AI request of
+  Gladys goes to your model, with its tools (device control, scenes…) and images.
+- A **chat model** and an optional small **router model** (the router sorts each message and must answer within
+  20 seconds).
+- With Ollama: the **context window** and the **time a model stays in memory** are set from Gladys, and the
+  capabilities of the model are checked (a model that cannot call tools gets a clear error, not a made-up answer).
+- The **connection status** names the server, the models and the models in memory.
+- A **dashboard widget**, two **scene triggers** (failure, recovery) and two **scene actions** (load the model, free
+  the memory).
+
+## Setting up the server
+
+**Ollama on the machine that runs Gladys** (the default: leave the address empty). Ollama only listens on
+`127.0.0.1`, which the integrations cannot reach. Make it listen on the gateway of the Gladys integrations network,
+`172.30.0.1`, which stays invisible from the rest of your network. On Linux:
+
+```bash
+sudo systemctl edit ollama
+# add:
+# [Unit]
+# After=docker.service
+# [Service]
+# Environment="OLLAMA_HOST=172.30.0.1:11434"
+sudo systemctl restart ollama
+OLLAMA_HOST=172.30.0.1:11434 ollama pull qwen3:8b
+```
+
+The `172.30.0.1` address exists once Gladys has started an integration, hence `After=docker.service`.
+
+**Another machine** (a PC with a graphics card): start Ollama with `OLLAMA_HOST=0.0.0.0` and type
+`http://<its address>:11434` in the address field. Ollama has no password: keep it on a trusted network.
+
+**Other servers**, address to type (ending with `/v1`):
+
+| Server    | Address                    | To know                                                        |
+| --------- | -------------------------- | -------------------------------------------------------------- |
+| LM Studio | `http://<address>:1234/v1` | Developer tab, start the server, “Serve on Local Network”      |
+| llama.cpp | `http://<address>:8080/v1` | `llama-server --jinja -c 16384 --host 0.0.0.0` (tools need it) |
+| LocalAI   | `http://<address>:8080/v1` | API key if `API_KEY` is set                                    |
+| vLLM      | `http://<address>:8000/v1` | `--enable-auto-tool-choice` and the tool parser of the model   |
+
+With these servers, the context window is set on the server side (at least 16384 tokens).
+
+## Choosing a model
+
+The assistant needs a model that **calls tools** ([list on ollama.com](https://ollama.com/search?c=tools)). The bigger
+the model, the better it creates scenes, and the more memory and time it takes. Indicative sizes with a 16k context:
+
+| Machine                                   | Chat model                    | Router model   |
+| ----------------------------------------- | ----------------------------- | -------------- |
+| Mini PC, 8 GB of RAM, no graphics card    | `qwen3:4b` (about 4 GB, slow) | `qwen3:1.7b`   |
+| 16 GB of RAM, no graphics card            | `qwen3:8b` (about 7 GB)       | `qwen3:1.7b`   |
+| Graphics card with 8 to 12 GB             | `qwen3:8b`, `llama3.1:8b`     | the same model |
+| Graphics card with 16 to 24 GB, Mac 32 GB | `qwen3:14b`, `gpt-oss:20b`    | `qwen3:4b`     |
+
+On a CPU, an 8B model answers in tens of seconds and loading it takes up to a minute: keep it in memory (setting below)
+and load it before the moments you talk to Gladys (scene action). A Raspberry Pi is too slow for the assistant.
 
 ## Configuration
 
-1. Open the **Configuration** tab of the integration.
-2. Set the **latitude** and **longitude** the demo weather station should
-   observe (they default to Paris), and pick your temperature unit.
-   The **refresh interval** sets how often the weather station and the
-   plug's power are read: every 5 minutes by default, every minute at most.
-3. Save: the devices appear in the **Discovery** tab, ready to be added.
+- **Server address**: empty for Ollama on the Gladys machine (`http://172.30.0.1:11434/v1`), otherwise the address of
+  the server. `/v1` is added to a bare `address:port`.
+- **API key**: only when the server asks for one.
+- **Chat model**: its exact name on the server (the **List the models** button shows them), e.g. `qwen3:8b`.
+- **Router model**: a small model for the router; empty = the chat model.
+- **Context window** (Ollama): 16384 by default. Creating a scene sends 10 to 15 thousand tokens; below the window,
+  Ollama silently cuts the start of the request and the assistant loses its instructions. The logs warn when a request
+  is larger than it.
+- **Keep the model in memory** (Ollama): 30 minutes by default, “Always” for instant answers.
+- **Let the chat model think** (Ollama): for qwen3, deepseek-r1… Off by default: much slower on a CPU.
+- **Answer timeout**: 110 seconds by default (Gladys waits 120). The router always has 18 seconds.
 
-The **Prefer the local connection** toggle drives the demo plug: it reports
-the channel it actually uses as a badge (local or cloud), with an orange dot
-when it runs degraded (local refused, cloud fallback).
+Then select **Local AI** in **Settings → Artificial Intelligence** (or with the button of the configuration page).
 
 ## Actions
 
-- **Test the weather provider** — performs a live request to Open-Meteo and
-  shows the current temperature and humidity under the button.
-- **Identify a device** — pick one of your devices in the list and it will
-  signal itself (the demo light "blinks" in the logs).
+- **Test the models**: asks each model for a one-word answer and shows the time it took (the first one also loads the
+  model).
+- **List the models**: shows the names of the models on the server, to copy into the fields.
 
 ## Scenes
 
-The integration adds its own cards to the scene editor (Gladys 5.1 or
-later), under the **Integrations** category:
+Triggers:
 
-- **Motion detected** (trigger) — starts the scene when a demo motion sensor
-  sees something move. Optionally pick the sensor and what moved (person,
-  animal); left empty, any detection matches. The following actions can
-  read what moved with `{{triggerEvent.data.target}}`.
-- **Identify a device** (action) — makes the chosen device signal itself.
-  It returns whether the device could signal itself, so the following
-  actions can depend on it.
+- **Local AI: the assistant fails**: server unreachable, model missing, too slow, not enough memory, model without tool
+  calling… Once per failure, not for every message. Variables: kind, message, request (chat, router, digest), model.
+- **Local AI: the assistant answers again**: the first answer after a failure, with the minutes of failure.
+
+Actions (Ollama only):
+
+- **Local AI: load the model in memory**: e.g. on waking up, so the first answer is quick. Output: the loading time.
+- **Local AI: free the memory**: unloads every model, e.g. at night. Output: the number of models unloaded.
 
 ## Dashboard
 
-Add the **Demo status** widget to a dashboard: it shows the live
-temperature of the weather station and the power of the office plug, the
-connection the plug currently uses (orange when degraded) and the observed
-location. Its **Identify the light** button makes the demo light signal
-itself.
+The **Local AI** widget shows the server, the chat and router models (green when in memory), the memory taken, the
+time of the last answer and the current failure, with two buttons (Ollama): load the model, free the memory. A setting
+hides the buttons.
+
+## Privacy
+
+Everything stays between Gladys and your server: the messages, the history, the device states read by the tools and
+the images of the chat. Nothing is written to the logs, at any level: only sizes and times. Ollama has no
+authentication: every integration installed in Gladys can reach it on `172.30.0.1`.
 
 ## Troubleshooting
 
-The integration logs everything it does: check the integration logs from the
-Gladys UI (or `docker logs` on the host) with `LOG_LEVEL=debug` for the full
-detail.
+- **“Cannot reach the model server”**: Ollama listens on `127.0.0.1` only (see above), or it started before Docker.
+  From the Gladys machine, `curl http://172.30.0.1:11434/api/version` must answer.
+- **“… is not on the server”**: pull it (`ollama pull <model>`) or copy its exact name with **List the models**.
+- **“… cannot call tools”**: choose a model of the [tools list](https://ollama.com/search?c=tools).
+- **“… did not answer in time”** or slow answers: smaller model, “Always” in memory, router on a small model.
+- **“Not enough memory”**: smaller model or smaller context window.
+- **The assistant ignores the house or invents devices**: context window too small (the logs say so), or model too
+  small to follow the instructions.
+- **Images**: a model without vision answers that it cannot see them (with Ollama); to describe camera images, choose
+  a model with both vision and tools (`qwen3-vl`, `mistral-small3.2`…).

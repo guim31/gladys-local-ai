@@ -1,0 +1,114 @@
+{
+  "_source": "Real answers of Ollama 0.40.15 (ollama/ollama Docker image, CPU) with qwen2.5:1.5b and qwen2.5:0.5b, recorded on 2026-11-09. Nothing personal in them.",
+  "version": { "version": "0.40.15" },
+  "models": {
+    "object": "list",
+    "data": [
+      { "id": "qwen2.5:0.5b", "object": "model", "created": 1794223560, "owned_by": "library" },
+      { "id": "qwen2.5:1.5b", "object": "model", "created": 1794223552, "owned_by": "library" }
+    ]
+  },
+  "show_tools": { "capabilities": ["completion", "tools"] },
+  "ps": {
+    "models": [
+      {
+        "name": "qwen2.5:1.5b",
+        "model": "qwen2.5:1.5b",
+        "size": 1373959618,
+        "digest": "65ec06548149b04c096a120e4a6da9d4017ea809c91734ea5631e89f96ddc57b",
+        "details": {
+          "parent_model": "",
+          "format": "gguf",
+          "family": "qwen2",
+          "families": ["qwen2"],
+          "parameter_size": "1.5B",
+          "quantization_level": "Q4_K_M"
+        },
+        "expires_at": "2026-11-09T11:37:03.631482139Z",
+        "size_vram": 0,
+        "context_length": 8192,
+        "runner": "llamacpp"
+      }
+    ]
+  },
+  "chat_tool_call": {
+    "model": "qwen2.5:1.5b",
+    "created_at": "2026-11-09T11:27:00.479037657Z",
+    "message": {
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_fkt5eji1",
+          "function": { "index": 0, "name": "get_temperature", "arguments": { "room": "kitchen" } }
+        }
+      ]
+    },
+    "done": true,
+    "done_reason": "stop",
+    "total_duration": 12074802490,
+    "load_duration": 4573331706,
+    "prompt_eval_count": 156,
+    "prompt_eval_cached_count": 0,
+    "prompt_eval_duration": 5241300000,
+    "eval_count": 21,
+    "eval_duration": 2254468000
+  },
+  "chat_answer": {
+    "model": "qwen2.5:1.5b",
+    "created_at": "2026-11-09T11:27:03.631158451Z",
+    "message": {
+      "role": "assistant",
+      "content": "The temperature in the kitchen is 21.5 degrees Celsius."
+    },
+    "done": true,
+    "done_reason": "stop",
+    "total_duration": 3134530391,
+    "load_duration": 888619,
+    "prompt_eval_count": 201,
+    "prompt_eval_cached_count": 170,
+    "prompt_eval_duration": 1303510000,
+    "eval_count": 15,
+    "eval_duration": 1817101000
+  },
+  "openai_tool_call": {
+    "id": "chatcmpl-210",
+    "object": "chat.completion",
+    "created": 1794223636,
+    "model": "qwen2.5:1.5b",
+    "system_fingerprint": "fp_ollama",
+    "choices": [
+      {
+        "index": 0,
+        "message": {
+          "role": "assistant",
+          "content": "",
+          "tool_calls": [
+            {
+              "id": "call_lpt5tw45",
+              "index": 0,
+              "type": "function",
+              "function": { "name": "get_temperature", "arguments": "{\"room\":\"kitchen\"}" }
+            }
+          ]
+        },
+        "finish_reason": "tool_calls"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 156,
+      "prompt_tokens_details": { "cached_tokens": 0 },
+      "completion_tokens": 21,
+      "total_tokens": 177
+    }
+  },
+  "openai_model_not_found": {
+    "error": {
+      "message": "model 'nope' not found",
+      "type": "not_found_error",
+      "param": null,
+      "code": null
+    }
+  },
+  "native_model_not_found": { "error": "model 'nope' not found" }
+}
