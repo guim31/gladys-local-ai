@@ -1,5 +1,9 @@
 # -----------------------------------------------------------------------------
-# Integration image.
+# Local AI integration image.
+#
+# A Node.js service (the Gladys side, through the SDK) that answers the AI
+# requests of Gladys with a model server of the local network (Ollama or any
+# OpenAI-compatible server), over plain HTTP. No native module.
 #
 # Gladys sandbox constraints ("the sandbox is the defense"):
 #   - rootfs mounted READ-ONLY -> never write outside /data
@@ -17,7 +21,7 @@ WORKDIR /app
 
 # Install the PROD dependencies first (better build cache).
 COPY package.json package-lock.json* ./
-RUN npm ci --omit=dev || npm install --omit=dev
+RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
 
 # Then the integration code.
 COPY index.js ./

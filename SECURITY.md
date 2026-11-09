@@ -30,6 +30,11 @@ Gladys before reporting a problem.
 
 In scope: the code of this repository and the Docker image it publishes.
 
+The integration stores nothing in `/data`. Its only secret is the optional API key of the model server, kept in the
+Gladys configuration, sent as a Bearer token to the configured address only and never logged. It talks to one
+server over HTTP, the one of the configuration (by default Ollama on the Gladys host, `172.30.0.1:11434`), and logs
+no content of the conversations, at any level.
+
 Out of scope: Gladys Assistant itself (see its
-[security policy](https://github.com/GladysAssistant/Gladys/security/policy)),
-and the third-party services and devices the integration talks to.
+[security policy](https://github.com/GladysAssistant/Gladys/security/policy)), and the model servers the integration
+talks to (Ollama has no authentication: any integration of the same Gladys can reach it).
