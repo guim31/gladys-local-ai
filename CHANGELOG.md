@@ -10,6 +10,8 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-11-09
+
 ### Added
 
 - AI provider for Gladys 5.3: the assistant (chat and tool calls, intent router, scene `ai.ask`, weekly digest) runs
@@ -24,3 +26,6 @@ the notes of the version's GitHub Release.
   the model in memory" and "free the memory" (Ollama).
 - "Local AI" dashboard widget: server, models, memory taken, last answer time, failure, load and unload buttons.
 - Documentation in English, French, German and Spanish, with the choice of a model for your machine.
+
+[Unreleased]: https://github.com/guim31/gladys-local-ai/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/guim31/gladys-local-ai/releases/tag/v1.0.0
