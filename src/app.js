@@ -24,6 +24,9 @@ const logger = createLogger({ name: 'app' });
 export const ACTIONS = { TEST_CONNECTION: 'test_connection', LIST_MODELS: 'list_models' };
 export const SCENE_ACTIONS = { LOAD_MODEL: 'load_model', UNLOAD_MODELS: 'unload_models' };
 
+/** Loading every requested model, within the 120 s of the scene action. */
+const LOAD_BUDGET_MS = 115_000;
+
 /** The status (and the models in memory it names) is re-read this often. */
 const STATUS_INTERVAL_MS = 5 * 60_000;
 
@@ -73,10 +76,17 @@ export function createApp(
       .catch((err) => logger.warn(`Status not updated: ${err?.message ?? err}`));
   };
 
+  // The localized reason of the current failure of the assistant: a check
+  // that reads the models fine generates no text, so it must not clear it.
+  let failureStatus = null;
   let checking = null;
   const refreshStatus = () => {
     checking ??= checkConnection(server, config)
-      .then(({ ok, message }) => setStatus(ok, message))
+      .then(({ ok, message }) =>
+        ok && events.state() && failureStatus
+          ? setStatus(false, failureStatus)
+          : setStatus(ok, message),
+      )
       .finally(() => {
         checking = null;
       });
@@ -84,6 +94,7 @@ export function createApp(
   };
 
   // --- AI provider: every AI request of the instance arrives here -------------------
+  let routerFailing = false;
   gladys.onAiChat(
     createChatHandler({
       server,
@@ -94,13 +105,33 @@ export function createApp(
           logger.warn(`${context.use} refused by the server: ${error.message}`);
           return;
         }
-        if (events.failure(error, context)) {
-          setStatus(false, failureMessage(error, config));
-          nudgeWidget();
+        // The core swallows the failures of the router (it then offers every
+        // tool) and a router waits behind a long chat on a busy CPU: it says
+        // nothing of the assistant, one log line per streak.
+        if (context.use === 'router') {
+          if (!routerFailing) {
+            routerFailing = true;
+            logger.warn(`The router model failed (${error.kind}): ${error.message}`);
+          }
+          return;
         }
+        const changed = events.failure(error, context);
+        failureStatus = failureMessage(error, config);
+        if (changed || connected !== false) {
+          setStatus(false, failureStatus);
+        }
+        nudgeWidget();
       },
       onSuccess: (answer) => {
+        if (answer.use === 'router') {
+          if (routerFailing) {
+            routerFailing = false;
+            logger.info('The router model answers again');
+          }
+          return;
+        }
         if (events.success(answer)) {
+          failureStatus = null;
           logger.info(`The assistant answers again (${answer.use}, ${answer.model})`);
           refreshStatus().catch(() => {});
           nudgeWidget();
@@ -140,8 +171,11 @@ export function createApp(
       throw new Error('No model chosen in the configuration');
     }
     const started = now();
+    // One deadline for all the models: the core gives the action 120 s.
     for (const model of models) {
-      await server.loadModel(config, model);
+      await server.loadModel(config, model, {
+        timeoutMs: Math.max(1000, LOAD_BUDGET_MS - (now() - started)),
+      });
     }
     const seconds = Math.round((now() - started) / 100) / 10;
     logger.info(`Loaded ${models.join(', ')} in ${seconds} s`);
@@ -214,6 +248,10 @@ export function createApp(
     config = normalizeConfig(raw, hostApiUrl);
     server.reset();
     connected = null;
+    // A fixed configuration starts clean: the next answer tells.
+    events.clear();
+    failureStatus = null;
+    routerFailing = false;
     logger.info(
       `Configuration: server ${safeUrl(config.base_url_resolved)}, chat ${config.model || '(none)'}, ` +
         `router ${modelFor(config, 'router') || '(none)'}, context ${config.context_window}, ` +

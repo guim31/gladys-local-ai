@@ -82,7 +82,7 @@ es demasiado lenta para el asistente.
 - **Modelo del enrutador**: un modelo pequeño para el enrutador; vacío = el modelo del chat.
 - **Ventana de contexto** (Ollama): 16384 por defecto. Crear una escena envía de 10 a 15 mil tokens; por debajo de la
   ventana, Ollama corta en silencio el comienzo de la solicitud y el asistente pierde sus instrucciones. Los registros
-  avisan cuando una solicitud la llena.
+  avisan cuando una solicitud la supera.
 - **Mantener el modelo en memoria** (Ollama): 30 minutos por defecto, «Siempre» para respuestas inmediatas.
 - **Dejar razonar al modelo del chat** (Ollama): para qwen3, deepseek-r1… Desactivado por defecto: mucho más lento en
   el procesador.

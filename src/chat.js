@@ -27,8 +27,56 @@ import { ERROR_KINDS, LocalAiError } from './server.js';
 const logger = createLogger({ name: 'chat' });
 
 export const ROUTER_TIMEOUT_MS = 18_000;
-/** Share of the context window past which Ollama has probably cut the prompt. */
-const CONTEXT_FULL_RATIO = 0.95;
+/** Characters per token, low on purpose: JSON tool schemas and French text are dense. */
+const CHARS_PER_TOKEN = 3.5;
+/** The bounds the core applies to a completion (validateAiCompletion of the SDK). */
+const MAX_TOOL_CALLS = 20;
+const MAX_ARGUMENTS_CHARS = 100_000;
+const TOOL_NAME = /^[a-zA-Z0-9_-]{1,64}$/;
+const MAX_CONTENT_CHARS = 50_000;
+
+/**
+ * @description Estimated tokens of a request. Ollama never says it cut a
+ * prompt (it keeps about half the window and reports the kept count), so the
+ * size is estimated before sending.
+ * @param {object} request - The request.
+ * @returns {number} The estimate.
+ */
+export function estimateTokens(request) {
+  const chars =
+    JSON.stringify(request?.messages ?? []).length + JSON.stringify(request?.tools ?? []).length;
+  return Math.round(chars / CHARS_PER_TOKEN);
+}
+
+/**
+ * @description Keep a completion within what the core accepts: tool calls
+ * with a valid name and bounded arguments, at most 20, content bounded. A
+ * small model inventing \`functions.get temp\` would otherwise make the core
+ * refuse the whole answer.
+ * @param {object} completion - The completion.
+ * @returns {number} How many tool calls were dropped.
+ */
+export function boundCompletion(completion) {
+  const message = completion.choices[0].message;
+  let dropped = 0;
+  if (Array.isArray(message.tool_calls)) {
+    const kept = message.tool_calls.filter(
+      (call) =>
+        TOOL_NAME.test(call.function.name) && call.function.arguments.length <= MAX_ARGUMENTS_CHARS,
+    );
+    dropped = message.tool_calls.length - Math.min(kept.length, MAX_TOOL_CALLS);
+    if (kept.length === 0) {
+      delete message.tool_calls;
+      message.content ??= '';
+    } else {
+      message.tool_calls = kept.slice(0, MAX_TOOL_CALLS);
+    }
+  }
+  if (typeof message.content === 'string' && message.content.length > MAX_CONTENT_CHARS) {
+    message.content = message.content.slice(0, MAX_CONTENT_CHARS);
+  }
+  return dropped;
+}
 
 /**
  * @description The role a request plays.
@@ -94,7 +142,10 @@ export function createChatHandler({
       if (!model) {
         throw new LocalAiError(ERROR_KINDS.CONFIG, 'No model chosen in the configuration');
       }
-      const timeoutMs = role === 'router' ? ROUTER_TIMEOUT_MS : config.timeout_seconds * 1000;
+      // One deadline for the whole request: detection and capabilities
+      // (after a reset) count too, the core does not wait longer.
+      const deadline =
+        started + (role === 'router' ? ROUTER_TIMEOUT_MS : config.timeout_seconds * 1000);
       let chatRequest = request ?? {};
       let think;
       const capabilities = await server.modelCapabilities(config, model);
@@ -115,11 +166,28 @@ export function createChatHandler({
         }
       }
       logger.debug(`${use} -> ${model}: ${sizeOf(chatRequest)}`);
+      const estimate = estimateTokens(chatRequest);
+      const fullKey = `${model} ${config.context_window}`;
+      const contextFull = capabilities !== null && estimate > config.context_window;
+      if (contextFull && !fullReported.has(fullKey)) {
+        fullReported.add(fullKey);
+        logger.warn(
+          `${model}: a request of about ${estimate} tokens exceeds the context window ` +
+            `(${config.context_window}): Ollama cuts the start of the prompt, ` +
+            'raise the context window in the configuration',
+        );
+      }
+      const timeoutMs = Math.max(1000, deadline - now());
       const completion = await server.chat(config, chatRequest, { model, timeoutMs, think });
+      const dropped = boundCompletion(completion);
+      if (dropped > 0) {
+        logger.warn(`${model} returned ${dropped} invalid or extra tool call(s): dropped`);
+      }
       const message = completion.choices[0].message;
       if (!message.content && !message.tool_calls) {
+        // The server works: the model said nothing usable this time.
         throw new LocalAiError(
-          ERROR_KINDS.SERVER,
+          ERROR_KINDS.REQUEST,
           completion.choices[0].finish_reason === 'length'
             ? 'The answer was cut at max_tokens before any text'
             : 'The model returned an empty answer',
@@ -131,19 +199,8 @@ export function createChatHandler({
       logger.debug(
         `${use} <- ${model} in ${(ms / 1000).toFixed(1)} s: ${promptTokens} tokens in, ` +
           `${completionTokens} out, ${message.tool_calls?.length ?? 0} tool call(s), ` +
-          `${message.content?.length ?? 0} chars`,
+          `${message.content?.length ?? 0} chars (estimate ${estimate} tokens in)`,
       );
-      const contextFull =
-        capabilities !== null && promptTokens >= config.context_window * CONTEXT_FULL_RATIO;
-      const fullKey = `${model} ${config.context_window}`;
-      if (contextFull && !fullReported.has(fullKey)) {
-        fullReported.add(fullKey);
-        logger.warn(
-          `${model}: the request filled the context window (${promptTokens} of ` +
-            `${config.context_window} tokens), Ollama has probably cut the start of the prompt: ` +
-            'raise the context window in the configuration',
-        );
-      }
       onSuccess({ use, model, ms, contextFull });
       return completion;
     } catch (err) {

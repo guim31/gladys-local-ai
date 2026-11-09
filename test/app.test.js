@@ -267,3 +267,89 @@ test('a new configuration re-detects the server and logs no secret', async () =>
   assert.equal(fake.requests.filter((request) => request.path === '/api/version').length, 2);
   assert.equal(fake.requests.at(-1).headers.authorization, 'Bearer sk-very-secret');
 });
+
+test('a failing chat model with a working router: one trigger, the status stays down', async () => {
+  const { gladys, app } = await start({
+    routes: ollamaRoutes({
+      'POST /api/chat': (request) =>
+        request.body.model === 'qwen2.5:1.5b'
+          ? json({ error: 'model requires more system memory (9.1 GiB) than is available' }, 500)
+          : json(FIXTURES.chat_answer),
+    }),
+  });
+  const turn = async () => {
+    await gladys.fake.aiChat({
+      messages: [{ role: 'user', content: 'x' }],
+      purpose: 'intent-classification',
+    });
+    await gladys.fake.aiChat({ messages: [{ role: 'user', content: 'x' }], purpose: 'chat' });
+  };
+  await turn();
+  await turn();
+  await turn();
+  assert.deepEqual(
+    gladys.fake.sceneEvents.map((event) => event.key),
+    ['error'],
+  );
+  assert.equal(gladys.fake.sceneEvents[0].data.kind, 'memory');
+  // The periodic check reads the models fine but must not say "connected".
+  await gladys.fake.configUpdated(gladys.fake.config);
+  assert.equal(app.events.state(), null, 'a new configuration starts clean');
+  await turn();
+  assert.equal(gladys.fake.connectionStatus.connected, false);
+  assert.match(gladys.fake.connectionStatus.message.en, /Not enough memory/);
+});
+
+test('a router failing alone fires nothing and leaves the status alone', async () => {
+  const { gladys, fake } = await start({
+    routes: ollamaRoutes({
+      'POST /api/chat': (request) =>
+        request.body.model === 'qwen2.5:0.5b'
+          ? json({ error: 'model not found' }, 404)
+          : json(FIXTURES.chat_answer),
+    }),
+  });
+  const router = await gladys.fake.aiChat({
+    messages: [{ role: 'user', content: 'x' }],
+    purpose: 'intent-classification',
+  });
+  assert.equal(router.success, false);
+  assert.equal(gladys.fake.sceneEvents.length, 0);
+  assert.equal(gladys.fake.connectionStatus.connected, true);
+  assert.ok(fake.requests.length > 0);
+});
+
+test('invalid tool calls are dropped, an empty answer is not a server failure', async () => {
+  const { gladys } = await start({
+    routes: ollamaRoutes({
+      'POST /api/chat': (request) =>
+        request.body.messages[0].content === 'empty'
+          ? json({ message: { role: 'assistant', content: '' }, done_reason: 'stop' })
+          : json({
+              message: {
+                role: 'assistant',
+                content: '',
+                tool_calls: [
+                  { function: { name: 'functions.get temp', arguments: {} } },
+                  { function: { name: 'get_temperature', arguments: { room: 'kitchen' } } },
+                ],
+              },
+              done_reason: 'stop',
+            }),
+    }),
+  });
+  const ack = await gladys.fake.aiChat({
+    messages: [{ role: 'user', content: 'go' }],
+    tools: TOOLS,
+  });
+  assert.equal(ack.success, true);
+  assert.deepEqual(validateAiCompletion(ack.data), []);
+  assert.deepEqual(
+    ack.data.choices[0].message.tool_calls.map((call) => call.function.name),
+    ['get_temperature'],
+  );
+  const empty = await gladys.fake.aiChat({ messages: [{ role: 'user', content: 'empty' }] });
+  assert.equal(empty.success, false);
+  assert.equal(gladys.fake.sceneEvents.length, 0);
+  assert.equal(gladys.fake.connectionStatus.connected, true);
+});

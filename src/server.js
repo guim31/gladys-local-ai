@@ -218,12 +218,14 @@ export function createServerClient({ fetchImpl = globalThis.fetch, now = Date.no
             : { kind: 'openai' },
         )
         .catch((err) => {
-          if (err.kind === ERROR_KINDS.UNREACHABLE || err.kind === ERROR_KINDS.TIMEOUT) {
-            detected.delete(base);
-            throw err;
+          // Only "no such route" says the server is not Ollama. A proxy in
+          // 502 while Ollama starts must not send every request to its /v1
+          // endpoint, which ignores the context window.
+          if ([400, 404, 405].includes(err.status)) {
+            return { kind: 'openai' };
           }
-          // 404 and the like: not Ollama.
-          return { kind: 'openai' };
+          detected.delete(base);
+          throw err;
         });
       detected.set(base, probe);
     }

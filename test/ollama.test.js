@@ -157,3 +157,15 @@ test('images: detected, and replaced by a note for a model without vision', () =
   assert.equal(text[0].content, `Look\n${IMAGE_OMITTED}`);
   assert.equal(hasImages([{ role: 'user', content: 'plain' }]), false);
 });
+
+test('the context estimate warns before Ollama cuts a scene-creation request', async () => {
+  const { estimateTokens } = await import('../src/chat.js');
+  const tools = [
+    { type: 'function', function: { name: 'scene_create', parameters: { d: 'x'.repeat(40_000) } } },
+  ];
+  const estimate = estimateTokens({
+    messages: [{ role: 'user', content: 'Create a scene' }],
+    tools,
+  });
+  assert.ok(estimate > 11_000 && estimate < 12_500, String(estimate));
+});

@@ -99,7 +99,8 @@ export function normalizeBaseUrl(raw, hostApiUrl) {
   } catch {
     return null;
   }
-  if (!['http:', 'https:'].includes(url.protocol)) {
+  // fetch refuses credentials in a URL: the API key field is the way.
+  if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) {
     return null;
   }
   const path = url.pathname.replace(/\/+$/, '');

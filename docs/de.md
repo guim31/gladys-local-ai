@@ -82,7 +82,7 @@ Raspberry Pi ist für den Assistenten zu langsam.
 - **Router-Modell**: ein kleines Modell für den Router; leer = das Chat-Modell.
 - **Kontextfenster** (Ollama): standardmäßig 16384. Eine Szene zu erstellen sendet 10 bis 15 Tausend Tokens;
   unterhalb des Fensters schneidet Ollama still den Anfang der Anfrage ab, und der Assistent verliert seine
-  Anweisungen. Die Protokolle warnen, wenn eine Anfrage es füllt.
+  Anweisungen. Die Protokolle warnen, wenn eine Anfrage größer ist.
 - **Modell im Speicher halten** (Ollama): standardmäßig 30 Minuten, „Immer“ für sofortige Antworten.
 - **Chat-Modell nachdenken lassen** (Ollama): für qwen3, deepseek-r1… Standardmäßig aus: auf der CPU viel langsamer.
 - **Zeitlimit der Antwort**: standardmäßig 110 Sekunden (Gladys wartet 120). Der Router hat immer 18 Sekunden.

@@ -76,7 +76,7 @@ and load it before the moments you talk to Gladys (scene action). A Raspberry Pi
 - **Router model**: a small model for the router; empty = the chat model.
 - **Context window** (Ollama): 16384 by default. Creating a scene sends 10 to 15 thousand tokens; below the window,
   Ollama silently cuts the start of the request and the assistant loses its instructions. The logs warn when a request
-  fills it.
+  is larger than it.
 - **Keep the model in memory** (Ollama): 30 minutes by default, “Always” for instant answers.
 - **Let the chat model think** (Ollama): for qwen3, deepseek-r1… Off by default: much slower on a CPU.
 - **Answer timeout**: 110 seconds by default (Gladys waits 120). The router always has 18 seconds.

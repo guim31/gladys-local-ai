@@ -174,3 +174,12 @@ test('OpenAI-compatible answers are tidied: object arguments, missing ids, reaso
   assert.equal('reasoning_content' in completion.choices[0].message, false);
   assert.throws(() => normalizeCompletion({ choices: [] }), { kind: ERROR_KINDS.SERVER });
 });
+
+test('a proxy error while probing is not cached as "not Ollama"', async () => {
+  let version = () => json({ error: 'Bad gateway' }, 502);
+  const fake = createFakeServer(ollamaRoutes({ 'GET /api/version': () => version() }));
+  const server = createServerClient({ fetchImpl: fake.fetch });
+  await assert.rejects(server.detect(config()), { kind: ERROR_KINDS.SERVER });
+  version = () => json(FIXTURES.version);
+  assert.equal((await server.detect(config())).kind, 'ollama');
+});

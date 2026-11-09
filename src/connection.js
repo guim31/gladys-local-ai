@@ -16,7 +16,8 @@ import { all, t } from './i18n.js';
 
 const logger = createLogger({ name: 'connection' });
 
-const TEST_TIMEOUT_MS = 100_000;
+/** Both tests together, within the 120 s of the action. */
+const TEST_BUDGET_MS = 110_000;
 /** Models named in a status at most (a status stays short). */
 const STATUS_MODELS = 6;
 /** Models named by the "List the models" button at most. */
@@ -174,10 +175,11 @@ export async function testConnection(server, config, now = Date.now) {
   }
   const lines = [];
   const tested = new Map();
+  const started = now();
   for (const role of ['chat', 'router']) {
     const model = modelFor(config, role);
     if (!tested.has(model)) {
-      const started = now();
+      const begin = now();
       let line;
       try {
         const capabilities = await server.modelCapabilities(config, model);
@@ -189,11 +191,11 @@ export async function testConnection(server, config, now = Date.now) {
           },
           {
             model,
-            timeoutMs: TEST_TIMEOUT_MS,
+            timeoutMs: Math.max(1000, TEST_BUDGET_MS - (now() - started)),
             think: capabilities?.includes('thinking') ? false : undefined,
           },
         );
-        const seconds = (now() - started) / 1000;
+        const seconds = (now() - begin) / 1000;
         line = (language) =>
           t('testAnswered', language, {
             model,

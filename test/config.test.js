@@ -27,6 +27,7 @@ test('typed addresses: scheme and /v1 added, trailing slash removed, junk refuse
   assert.equal(normalizeBaseUrl('http://192.0.2.5/proxy/v1', host), 'http://192.0.2.5/proxy/v1');
   assert.equal(normalizeBaseUrl('ftp://192.0.2.5', host), null);
   assert.equal(normalizeBaseUrl('http://', host), null);
+  assert.equal(normalizeBaseUrl('http://user:pass@192.0.2.5:8080/v1', host), null);
   assert.equal(normalizeBaseUrl('  ', host), 'http://172.30.0.1:11434/v1');
 });
 

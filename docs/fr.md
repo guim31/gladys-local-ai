@@ -82,7 +82,7 @@ Un Raspberry Pi est trop lent pour l’assistant.
 - **Modèle du routeur** : un petit modèle pour le routeur ; vide = le modèle du chat.
 - **Fenêtre de contexte** (Ollama) : 16384 par défaut. Créer une scène envoie 10 à 15 mille jetons ; en dessous de la
   fenêtre, Ollama coupe en silence le début de la requête et l’assistant perd ses consignes. Les journaux préviennent
-  quand une requête la remplit.
+  quand une requête la dépasse.
 - **Garder le modèle en mémoire** (Ollama) : 30 minutes par défaut, « Toujours » pour des réponses immédiates.
 - **Laisser réfléchir le modèle du chat** (Ollama) : pour qwen3, deepseek-r1… Désactivé par défaut : bien plus lent
   sur processeur.
