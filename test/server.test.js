@@ -109,7 +109,13 @@ test('a wrong path says to check the address, an invalid address never calls', a
 });
 
 test('a server that does not answer in time is a timeout', async () => {
-  const fake = createFakeServer(ollamaRoutes({ 'POST /api/chat': () => new Promise(() => {}) }));
+  const fake = createFakeServer(
+    ollamaRoutes({
+      // A ref'd timer: AbortSignal.timeout is unref'd, and Node 22 would end
+      // the run with the test still pending.
+      'POST /api/chat': () => new Promise((resolve) => setTimeout(() => resolve(json({})), 1000)),
+    }),
+  );
   const slow = async (url, init) => {
     const pending = fake.fetch(url, init);
     return Promise.race([
